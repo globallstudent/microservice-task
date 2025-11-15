@@ -2,6 +2,8 @@
 
 Auto mobile transport pricing calculation microservice built with FastAPI, PostgreSQL, Redis, and Celery.
 
+![alt text](image_2025-11-15_00-25-07.png)
+
 ## Features
 
 - **JWT Authentication** - Login with admin/agent roles
