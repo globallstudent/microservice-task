@@ -11,7 +11,6 @@ engine_worker = create_async_engine(settings.DATABASE_URL, future=True, echo=Fal
 AsyncSessionWorker = sessionmaker(engine_worker, class_=AsyncSession, expire_on_commit=False)
 
 async def reprice_order_async(order_id: int):
-    """Background task to reprice an order"""
     try:
         async with AsyncSessionWorker() as db:
             res = await db.execute(select(Order).where(Order.id == order_id))
@@ -19,7 +18,6 @@ async def reprice_order_async(order_id: int):
             if not order:
                 return
             
-            # Mock: in real app fetch lead details
             quote_req = QuoteRequest(
                 base_price=order.base_price,
                 distance_km=100.0,
@@ -34,7 +32,6 @@ async def reprice_order_async(order_id: int):
             db.add(order)
             await db.commit()
             
-            # Send webhook only if price changed
             if old_price != order.final_price:
                 await send_webhook({
                     "order_id": order.id,

@@ -320,6 +320,201 @@ docker-compose exec worker celery -A app.services.tasks.celery_app inspect activ
 docker-compose exec worker celery -A app.services.tasks.celery_app inspect stats
 ```
 
+## Monitoring & Metrics
+
+The microservice exports Prometheus metrics for comprehensive monitoring:
+
+### Prometheus Metrics Endpoint
+
+```bash
+# View all metrics in Prometheus format
+curl http://localhost:8000/metrics
+```
+
+**Included Metrics** (18+):
+- **HTTP Requests**: Total requests, duration histogram, status codes
+- **Database Operations**: Query count, execution time, connection pool status
+- **Cache Performance**: Hits, misses, hit rate, Redis connection status
+- **Webhooks**: Sent count, failed count, retry count, latency
+- **Pricing**: Calculations, cache hits, recalculation count
+- **Rate Limiting**: Exceeded count, active users
+- **Audit Logs**: Logged mutations by action type
+- **System Health**: Service uptime, dependency connections
+
+### Service Health Checks
+
+```bash
+# Liveness probe (service running?)
+curl http://localhost:8000/health
+
+# Readiness probe (dependencies ready?)
+curl http://localhost:8000/readiness
+```
+
+Example response:
+```json
+{
+  "status": "healthy",
+  "uptime": 3600.5,
+  "database": "connected",
+  "redis": "connected",
+  "version": "1.0.0"
+}
+```
+
+### Monitoring Stack
+
+With Docker Compose, three monitoring services are included:
+
+#### Prometheus (Port 9090)
+```bash
+# Access dashboard
+http://localhost:9090
+
+# Query metrics
+# Query: http_requests_total
+# Query: cache_hits_total / (cache_hits_total + cache_misses_total)
+# Query: histogram_quantile(0.95, request_duration_seconds)
+```
+
+**Configuration**: `monitoring/prometheus.yml`
+- Scrape interval: 15 seconds (global), 5 seconds (API endpoint)
+- Retention: 15 days
+- Targets: api:8000/metrics
+
+#### Grafana (Port 3000)
+```bash
+# Access dashboard
+http://localhost:3000
+
+# Default credentials
+username: admin
+password: admin
+```
+
+**Features**:
+- Pre-configured Prometheus datasource
+- Sample dashboard with 4 panels:
+  - Request Rate (req/s)
+  - Request Duration (p95 latency)
+  - Error Rate (4xx + 5xx)
+  - Cache Hit Rate
+- Real-time updates every 10 seconds
+
+**Import Custom Dashboards**:
+1. Visit http://localhost:3000/dashboards
+2. Click "Import" → Upload JSON
+3. Select Prometheus datasource
+
+#### Setup Instructions
+
+```bash
+# Start all services including monitoring
+docker-compose up -d
+
+# Verify services are healthy
+docker-compose ps
+
+# View logs
+docker-compose logs -f api
+docker-compose logs -f prometheus
+docker-compose logs -f grafana
+
+# Access monitoring stack
+echo "Prometheus: http://localhost:9090"
+echo "Grafana: http://localhost:3000"
+```
+
+### Key Metrics to Monitor
+
+**API Health**:
+```
+http_requests_total{status="200"} > 0  # Requests succeeding
+http_requests_duration_seconds (p95) < 1  # 95th percentile under 1s
+http_requests_total{status="5xx"} == 0  # No server errors
+```
+
+**Database Performance**:
+```
+db_operations_seconds (p95) < 0.5  # DB queries under 500ms
+db_connection_pool_size  # Connection pool usage
+```
+
+**Cache Effectiveness**:
+```
+cache_hit_rate = hits / (hits + misses) > 0.8  # >80% hit rate
+pricing_cache_ttl_seconds  # Cache validity window
+```
+
+**Rate Limiting**:
+```
+rate_limit_exceeded_total  # Users hitting limits
+rate_limit_active_users  # Users near limits
+```
+
+**Webhooks Reliability**:
+```
+webhooks_sent_total  # Total webhooks sent
+webhooks_failed_total  # Failed attempts
+webhooks_retried_total  # Retry count
+webhook_latency_seconds (p95)  # Delivery time
+```
+
+### Alerting Setup (Optional)
+
+Create alert rules in `monitoring/prometheus.yml`:
+
+```yaml
+groups:
+  - name: api_alerts
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        annotations:
+          summary: "High error rate detected"
+          
+      - alert: DatabaseDown
+        expr: db_connection_pool_available == 0
+        for: 1m
+        annotations:
+          summary: "Database connection pool exhausted"
+          
+      - alert: RedisDown
+        expr: redis_connected == 0
+        for: 1m
+        annotations:
+          summary: "Redis connection lost"
+```
+
+### Grafana Dashboards
+
+Pre-built dashboard includes:
+
+1. **Request Metrics Panel**
+   - Shows request rate over time
+   - Color-coded by HTTP status
+   - Drill-down by endpoint
+
+2. **Latency Panel**
+   - Request duration distribution
+   - p50, p95, p99 percentiles
+   - Identify slow endpoints
+
+3. **Error Panel**
+   - Error rate trend
+   - Breakdown by error type
+   - Alert threshold visualization
+
+4. **Cache Panel**
+   - Hit/miss ratio
+   - Cache efficiency trend
+   - TTL expiry tracking
+
 ## Audit Logging
 
 All mutations (POST, PUT, DELETE) are logged:

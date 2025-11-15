@@ -1,10 +1,17 @@
 from app.schemas.quote import QuoteRequest, QuoteResponse
+from app.core.enums import VehicleType
 
-VEHICLE_BONUS = {"sedan": 10.0, "suv": 20.0, "truck": 30.0}
+VEHICLE_BONUS = {
+    VehicleType.SEDAN: 10.0,
+    VehicleType.SUV: 20.0,
+    VehicleType.TRUCK: 30.0
+}
 OPERABLE_ADJUSTMENT = 15.0
 DISTANCE_COEFF = 1.5
 
+
 async def calculate_price(req: QuoteRequest) -> QuoteResponse:
+
     breakdown = {
         "base_price": req.base_price,
         "distance_cost": req.distance_km * DISTANCE_COEFF,

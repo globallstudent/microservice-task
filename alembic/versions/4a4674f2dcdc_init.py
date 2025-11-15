@@ -1,8 +1,8 @@
 """init
 
-Revision ID: b023a3836c39
+Revision ID: 4a4674f2dcdc
 Revises: 
-Create Date: 2025-11-14 23:31:38.684673
+Create Date: 2025-11-15 07:22:36.541767
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'b023a3836c39'
+revision: str = '4a4674f2dcdc'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,7 +24,7 @@ def upgrade() -> None:
     op.create_table('users',
     sa.Column('username', sa.String(length=64), nullable=False),
     sa.Column('password_hash', sa.String(length=255), nullable=False),
-    sa.Column('role', sa.String(length=20), nullable=False),
+    sa.Column('role', sa.Enum('ADMIN', 'AGENT', name='userrole'), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
@@ -49,7 +49,7 @@ def upgrade() -> None:
     sa.Column('email', sa.String(length=120), nullable=True),
     sa.Column('origin_zip', sa.String(length=20), nullable=True),
     sa.Column('dest_zip', sa.String(length=20), nullable=True),
-    sa.Column('vehicle_type', sa.String(length=20), nullable=True),
+    sa.Column('vehicle_type', sa.Enum('SEDAN', 'SUV', 'TRUCK', name='vehicletype'), nullable=False),
     sa.Column('operable', sa.Boolean(), nullable=True),
     sa.Column('created_by', sa.Integer(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
@@ -73,13 +73,15 @@ def upgrade() -> None:
     op.create_index(op.f('ix_attachments_id'), 'attachments', ['id'], unique=False)
     op.create_table('orders',
     sa.Column('lead_id', sa.Integer(), nullable=False),
-    sa.Column('status', sa.String(length=20), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=False),
+    sa.Column('status', sa.Enum('DRAFT', 'QUOTED', 'BOOKED', 'DELIVERED', name='orderstatus'), nullable=False),
     sa.Column('base_price', sa.Float(), nullable=False),
     sa.Column('final_price', sa.Float(), nullable=True),
     sa.Column('notes', sa.String(), nullable=True),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
     sa.ForeignKeyConstraint(['lead_id'], ['leads.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

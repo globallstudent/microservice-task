@@ -10,13 +10,11 @@ celery_app.conf.task_routes = {"app.services.tasks.reprice_order": {"queue": "re
 
 @celery_app.task(bind=True, max_retries=3)
 def reprice_order(self, order_id: int):
-    """Background task to reprice an order"""
     import asyncio
     from app.services.tasks_internal import reprice_order_async
     
     try:
         asyncio.run(reprice_order_async(order_id))
     except Exception as e:
-        # Retry with exponential backoff
         retry_kwargs = {"countdown": 2 ** self.request.retries}
         raise self.retry(exc=e, **retry_kwargs)

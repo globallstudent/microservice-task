@@ -12,7 +12,6 @@ from app.schemas.quote import QuoteRequest
     (500.0, 200.0, "suv", 50.0, True, 910.0),      # 500 + 300 + 20 + 50 + 15
 ])
 async def test_pricing_formula(base, distance, vt, season, operable, expected_min):
-    """Test pricing formula with various combinations"""
     req = QuoteRequest(
         base_price=base,
         distance_km=distance,
@@ -22,21 +21,17 @@ async def test_pricing_formula(base, distance, vt, season, operable, expected_mi
     )
     res = await calculate_price(req)
     
-    # Verify final price matches expected
     assert res.final_price >= expected_min
     assert isinstance(res.final_price, float)
     
-    # Verify breakdown
     assert "price_breakdown" in res.model_dump()
     breakdown = res.price_breakdown
     assert breakdown["base_price"] == base
     assert breakdown["distance_cost"] == distance * 1.5
     assert breakdown["season_bonus"] == season
     
-    # Verify vehicle bonus
     vehicle_bonus_map = {"sedan": 10.0, "suv": 20.0, "truck": 30.0}
     assert breakdown["vehicle_bonus"] == vehicle_bonus_map[vt]
     
-    # Verify operable adjustment
     assert breakdown["operable_adjustment"] == (15.0 if operable else 0.0)
 
