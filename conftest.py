@@ -1,7 +1,3 @@
-"""
-Shared pytest configuration and fixtures for all tests
-"""
-
 import pytest
 import asyncio
 from httpx import AsyncClient
@@ -21,7 +17,6 @@ from app.core.enums import UserRole
 
 @pytest.fixture(scope="session")
 def event_loop():
-    """Create and set event loop for entire test session"""
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
