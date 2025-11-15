@@ -386,11 +386,13 @@ http://localhost:9090
 ```bash
 # Access dashboard
 http://localhost:3000
-
-# Default credentials
-username: admin
-password: admin
 ```
+
+**Default Login Credentials**:
+- **Username**: `admin`
+- **Password**: `admin`
+
+> ⚠️ Change default password after first login in production environments
 
 **Features**:
 - Pre-configured Prometheus datasource
